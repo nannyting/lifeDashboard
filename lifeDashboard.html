@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>生活管理面板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF7F1;
+    --paper-2:#F3ECE0;
+    --card:#FFFDF9;
+    --ink:#2E2A25;
+    --ink-soft:#6B6257;
+    --line:#E6DCC9;
+    --line-2:#EFE7D8;
+    --green:#4C6B52;
+    --green-bg:#E8EEE4;
+    --rust:#A8553B;
+    --rust-bg:#F3E4DC;
+    --teal:#336478;
+    --teal-bg:#DFEBEE;
+    --gold:#93712E;
+    --gold-bg:#F2E9D3;
+    --danger:#A8402F;
+    --radius-s:6px;
+    --radius-m:10px;
+    --shadow:0 1px 2px rgba(46,42,37,.06), 0 1px 1px rgba(46,42,37,.04);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0; height:100%;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  :root{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans TC', system-ui, -apple-system, sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:'Noto Serif TC', 'Noto Sans TC', serif;
+    font-weight:700;
+    margin:0 0 .3em 0;
+    color:var(--ink);
+  }
+  .app{display:flex; min-height:100vh;}
+
+  /* ---- sidebar ---- */
+  .sidebar{
+    width:222px; flex:none;
+    background:var(--paper-2);
+    border-right:1px solid var(--line);
+    padding:calc(26px + env(safe-area-inset-top,0px)) 16px calc(26px + env(safe-area-inset-bottom,0px)) 16px;
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+    transition:width .18s ease, padding .18s ease;
+    overflow:hidden;
+  }
+  .brand{padding:0 8px 22px 8px; border-bottom:1px solid var(--line); margin-bottom:18px; display:flex; align-items:flex-start; justify-content:space-between; gap:6px;}
+  .brand .mark{font-family:'Noto Serif TC',serif; font-weight:900; font-size:22px; letter-spacing:.02em; white-space:nowrap;}
+  .brand .sub{font-size:12px; color:var(--ink-soft); margin-top:4px; white-space:nowrap;}
+  .collapse-btn{
+    all:unset; cursor:pointer; flex:none; width:26px; height:26px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; color:var(--ink-soft); font-size:14px;
+    margin-top:2px;
+  }
+  .collapse-btn:hover{background:var(--card); color:var(--ink);}
+  nav.tabs{display:flex; flex-direction:column; gap:3px;}
+  nav.tabs button{
+    all:unset; cursor:pointer;
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:var(--radius-s);
+    font-size:14.5px; font-weight:500; color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  nav.tabs button .ic{width:20px; text-align:center; font-size:16px; flex:none;}
+  nav.tabs button:hover{background:var(--card);}
+  nav.tabs button.active{background:var(--card); color:var(--ink); font-weight:700; box-shadow:var(--shadow);}
+  .sidebar-foot{margin-top:auto; padding:10px 8px 0 8px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-soft); white-space:nowrap;}
+
+  /* collapsed state — icon-only rail */
+  .sidebar.collapsed{width:64px; padding:26px 10px;}
+  .sidebar.collapsed .brand{justify-content:center; padding:0 0 18px 0; border-bottom:none; margin-bottom:10px;}
+  .sidebar.collapsed .brand .mark .txt,
+  .sidebar.collapsed .brand .sub,
+  .sidebar.collapsed .label,
+  .sidebar.collapsed .sidebar-foot{display:none;}
+  .sidebar.collapsed .collapse-btn{transform:rotate(180deg);}
+  .sidebar.collapsed nav.tabs button{justify-content:center; padding:10px 0;}
+  .sidebar.collapsed nav.tabs button .ic{width:auto;}
+
+  /* ---- main ---- */
+  main.content{flex:1; padding:30px 36px 60px; max-width:1180px;}
+  .page-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:8px;}
+  .page-head .today{font-size:13px; color:var(--ink-soft);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block; animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .grid{display:grid; gap:16px;}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-2{grid-template-columns:1fr 1fr;}
+  @media(max-width:1000px){ .grid.cols-4{grid-template-columns:repeat(2,1fr);} .grid.cols-2{grid-template-columns:1fr;} .grid.cols-3{grid-template-columns:1fr 1fr;} }
+
+  .card{
+    background:var(--card); border:1px solid var(--line-2); border-radius:var(--radius-m);
+    padding:16px 18px; box-shadow:var(--shadow);
+  }
+  .card h3{font-size:14px; letter-spacing:.02em;}
+  .stat{ }
+  .stat .num{font-family:'Noto Serif TC',serif; font-size:30px; font-weight:900; line-height:1;}
+  .stat .label{font-size:12px; color:var(--ink-soft); margin-top:6px;}
+  .bar-track{height:7px; background:var(--paper-2); border-radius:99px; margin-top:10px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:99px; background:var(--green);}
+
+  .accent-green{border-left:3px solid var(--green);}
+  .accent-rust{border-left:3px solid var(--rust);}
+  .accent-teal{border-left:3px solid var(--teal);}
+  .accent-gold{border-left:3px solid var(--gold);}
+
+  .section-title{display:flex; align-items:center; justify-content:space-between; margin:28px 0 10px;}
+  .section-title h2{font-size:18px;}
+  .pill{display:inline-block; font-size:11px; padding:2px 8px; border-radius:99px; background:var(--paper-2); color:var(--ink-soft); font-weight:600;}
+  .pill.on{background:var(--green-bg); color:var(--green);}
+  .pill.warn{background:var(--gold-bg); color:var(--gold);}
+
+  .list{display:flex; flex-direction:column; gap:8px;}
+  .row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card); border:1px solid var(--line-2); border-radius:var(--radius-s);
+    padding:10px 12px;
+  }
+  .row.done{opacity:.5;}
+  .card.done{opacity:.55;}
+  .row .title{flex:1; font-size:14px;}
+  .row .title.strike{text-decoration:line-through;}
+  .row .meta{font-size:11.5px; color:var(--ink-soft);}
+  .row .tag{font-size:10.5px; padding:1px 7px; border-radius:99px; background:var(--paper-2); color:var(--ink-soft);}
+  .chk{
+    width:19px; height:19px; border-radius:5px; border:1.6px solid #C9BEA6;
+    cursor:pointer; flex:none; display:flex; align-items:center; justify-content:center;
+    background:#fff; font-size:12px; color:#fff;
+  }
+  .chk.checked{background:var(--green); border-color:var(--green);}
+  .del{all:unset; cursor:pointer; color:var(--ink-soft); font-size:15px; padding:2px 6px; border-radius:4px;}
+  .del:hover{background:var(--rust-bg); color:var(--rust);}
+
+  .form-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+  input[type=text], input[type=number], input[type=date], input[type=time], select, textarea{
+    font-family:inherit; font-size:13.5px; padding:8px 10px;
+    border:1px solid var(--line); border-radius:var(--radius-s); background:#fff; color:var(--ink);
+  }
+  textarea{width:100%; resize:vertical; min-height:54px;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--green); outline-offset:1px;}
+  button.btn{
+    all:unset; cursor:pointer; font-family:inherit; font-weight:700; font-size:13.5px;
+    padding:8px 16px; border-radius:var(--radius-s); background:var(--ink); color:var(--paper);
+  }
+  button.btn:hover{opacity:.88;}
+  button.btn.ghost{background:transparent; border:1px solid var(--line); color:var(--ink);}
+  button.btn.sm{padding:5px 11px; font-size:12px;}
+  button.btn.green{background:var(--green);}
+  button.btn.rust{background:var(--rust);}
+  button.btn.teal{background:var(--teal);}
+
+  .empty{color:var(--ink-soft); font-size:13px; padding:18px 4px; text-align:center;}
+
+  /* calendar */
+  .cal-wrap{display:grid; grid-template-columns:1.5fr 1fr; gap:18px;}
+  @media(max-width:1000px){.cal-wrap{grid-template-columns:1fr;}}
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .cal-dow{font-size:11px; color:var(--ink-soft); text-align:center; padding-bottom:4px; font-weight:700;}
+  .cal-cell{
+    aspect-ratio:1/1; border:1px solid var(--line-2); border-radius:8px; background:#fff;
+    padding:5px; cursor:pointer; position:relative; display:flex; flex-direction:column;
+  }
+  .cal-cell.pad{background:transparent; border:none; cursor:default;}
+  .cal-cell:hover{border-color:var(--green);}
+  .cal-cell.today{border-color:var(--green); box-shadow:0 0 0 1.5px var(--green) inset;}
+  .cal-cell.selected{background:var(--green-bg);}
+  .cal-cell .d{font-size:12px; font-weight:700;}
+  .cal-dots{display:flex; gap:3px; margin-top:auto; flex-wrap:wrap;}
+  .dot{width:6px; height:6px; border-radius:50%;}
+  .dot.green{background:var(--green);} .dot.teal{background:var(--teal);} .dot.gold{background:var(--gold);} .dot.rust{background:var(--rust);}
+
+  .timeline{position:relative; padding-left:44px; margin-top:12px;}
+  .tl-row{display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px dashed var(--line-2); font-size:12.5px;}
+  .tl-row .time{width:90px; color:var(--ink-soft); font-variant-numeric:tabular-nums; flex:none;}
+  .tl-row .ttl{flex:1;}
+
+  details.ref{margin-top:10px;}
+  details.ref summary{cursor:pointer; font-size:13px; font-weight:700; color:var(--teal); padding:4px 0;}
+  table.ref-table{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px;}
+  table.ref-table th, table.ref-table td{border-bottom:1px solid var(--line-2); padding:6px 8px; text-align:left;}
+  table.ref-table th{color:var(--ink-soft); font-weight:600; font-size:11.5px;}
+
+  .today-plan{display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
+  .today-plan .chip{background:var(--paper-2); border-radius:99px; padding:6px 14px; font-size:12.5px;}
+
+  .water-btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .photo-thumb{width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--line);}
+  .photo-row{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+
+  .hint{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .link-tag{font-size:10.5px; padding:1px 7px; border-radius:99px; background:var(--gold-bg); color:var(--gold); font-weight:600;}
+
+  .ing-chip{
+    display:inline-flex; align-items:center; gap:5px; font-size:12.5px;
+    padding:4px 10px; border-radius:99px; border:1px solid var(--line); background:#fff; cursor:pointer;
+  }
+  .ing-chip.got{background:var(--green-bg); border-color:var(--green); color:var(--green); text-decoration:line-through;}
+  .ing-wrap{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0;}
+  .progress-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;}
+
+  svg.trend{width:100%; height:120px; margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div>
+        <div class="mark"><span class="txt">生活管理面板</span></div>
+        <div class="sub">採購・待辦・運動・飲食</div>
+      </div>
+      <button class="collapse-btn" id="collapseBtn" onclick="toggleSidebar()" title="收合／展開側欄">‹</button>
+    </div>
+    <nav class="tabs" id="navTabs">
+      <button data-tab="overview" class="active"><span class="ic">🏠</span><span class="label">總覽</span></button>
+      <button data-tab="shopping"><span class="ic">🛒</span><span class="label">採購清單</span></button>
+      <button data-tab="todo"><span class="ic">✅</span><span class="label">待辦與行事曆</span></button>
+      <button data-tab="fitness"><span class="ic">🏋️</span><span class="label">運動健身</span></button>
+      <button data-tab="diet"><span class="ic">🥗</span><span class="label">飲食控管</span></button>
+      <button data-tab="cooking"><span class="ic">🍳</span><span class="label">做菜清單</span></button>
+      <button data-tab="driving"><span class="ic">🚗</span><span class="label">駕駛練習</span></button>
+      <button data-tab="divorce"><span class="ic">📋</span><span class="label">離婚事務</span></button>
+    </nav>
+    <div class="sidebar-foot">資料儲存在此瀏覽器內<br>（localStorage，離線可用）</div>
+  </aside>
+
+  <main class="content">
+
+    <!-- ================= OVERVIEW ================= -->
+    <section class="tab-panel active" id="tab-overview">
+      <div class="page-head">
+        <h1 id="ovTitle">今天</h1>
+        <div class="today" id="ovDate"></div>
+      </div>
+
+      <div class="grid cols-4" id="ovStats"></div>
+
+      <div class="section-title"><h2>今日待辦</h2><span class="pill" id="ovTodoPill"></span></div>
+      <div class="list" id="ovTodoList"></div>
+
+      <div class="section-title"><h2>待採購（優先）</h2><span class="pill" id="ovShopPill"></span></div>
+      <div class="list" id="ovShopList"></div>
+    </section>
+
+    <!-- ================= SHOPPING ================= -->
+    <section class="tab-panel" id="tab-shopping">
+      <div class="page-head"><h1>採購清單</h1></div>
+
+      <div class="card">
+        <h3>新增採購項目</h3>
+        <div class="form-row">
+          <input type="text" id="spName" placeholder="品名">
+          <select id="spCat">
+            <option>食材</option><option>日用品</option><option>孩子用品</option>
+            <option>教材教具</option><option>其他</option>
+          </select>
+          <input type="number" id="spQty" placeholder="數量" style="width:80px;">
+          <input type="number" id="spPrice" placeholder="預估金額" style="width:100px;">
+          <input type="text" id="spStore" placeholder="商店／連結" style="width:160px;">
+        </div>
+        <div class="form-row">
+          <input type="text" id="spNote" placeholder="備註" style="flex:1;">
+          <button class="btn green" onclick="addShopping()">加入清單</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>待購買</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="spFilter" onchange="renderShopping()">
+            <option value="">全部分類</option><option>食材</option><option>日用品</option>
+            <option>孩子用品</option><option>教材教具</option><option>其他</option>
+          </select>
+        </div>
+      </div>
+      <div class="list" id="shopActiveList"></div>
+
+      <div class="section-title"><h2>已購買</h2>
+        <button class="btn ghost sm" onclick="clearPurchased()">清除已購買</button>
+      </div>
+      <div class="list" id="shopDoneList"></div>
+    </section>
+
+    <!-- ================= TODO + CALENDAR ================= -->
+    <section class="tab-panel" id="tab-todo">
+      <div class="page-head"><h1>待辦與行事曆</h1></div>
+
+      <div class="card">
+        <h3>新增待辦</h3>
+        <div class="form-row">
+          <input type="text" id="tdTitle" placeholder="任務內容" style="flex:1; min-width:180px;">
+          <select id="tdCat"><option>工作</option><option>孩子</option><option>家務</option><option>個人</option><option>其他</option></select>
+          <select id="tdPriority"><option value="normal">一般</option><option value="high">重要</option></select>
+          <input type="date" id="tdDue">
+        </div>
+        <div class="form-row">
+          <label style="font-size:13px; display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="tdShopping" style="width:16px;height:16px;"> 需要採購（會同步到採購清單）
+          </label>
+          <button class="btn green" onclick="addTodo()">加入待辦</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>待辦清單</h2><span class="pill" id="tdPill"></span></div>
+      <div class="list" id="todoList"></div>
+
+      <div class="cal-wrap">
+        <div>
+          <div class="section-title" style="margin-top:26px;"><h2>每月行事曆</h2></div>
+          <div class="card">
+            <div class="cal-nav">
+              <button class="btn ghost sm" onclick="calShift(-1)">‹ 上月</button>
+              <strong id="calLabel"></strong>
+              <button class="btn ghost sm" onclick="calShift(1)">下月 ›</button>
+            </div>
+            <div class="cal-grid" id="calDow"></div>
+            <div class="cal-grid" id="calGrid" style="margin-top:5px;"></div>
+            <div class="hint">綠點＝運動打卡・藍點＝飲食打卡・金點＝飲水達標・橘點＝當日有待辦</div>
+          </div>
+        </div>
+        <div>
+          <div class="section-title" style="margin-top:26px;"><h2 id="dayPanelTitle">當日時間安排</h2></div>
+          <div class="card">
+            <div class="form-row">
+              <input type="time" id="blkStart" style="width:100px;">
+              <input type="time" id="blkEnd" style="width:100px;">
+              <input type="text" id="blkTitle" placeholder="安排內容" style="flex:1; min-width:100px;">
+              <button class="btn sm green" onclick="addBlock()">新增</button>
+            </div>
+            <div class="timeline" id="dayTimeline"></div>
+            <div class="hint" id="daySummary" style="margin-top:10px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FITNESS ================= -->
+    <section class="tab-panel" id="tab-fitness">
+      <div class="page-head"><h1>運動健身</h1></div>
+
+      <div class="card accent-rust">
+        <h3>今日課表（依星期自動帶入 30 天計畫）</h3>
+        <div class="today-plan" id="fitTodayPlan"></div>
+        <details class="ref" id="fitStrengthRef" style="display:none;">
+          <summary>查看今日重訓動作教學</summary>
+          <table class="ref-table" id="fitStrengthTable"></table>
+        </details>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:16px;">
+        <div class="card">
+          <h3>今日打卡</h3>
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; margin:8px 0;">
+            <input type="checkbox" id="fitDoneChk" onchange="toggleFitDone()"> 完成今日運動
+          </label>
+          <div class="form-row">
+            <input type="number" id="fitDuration" placeholder="實際時間(分)" style="width:130px;">
+            <input type="text" id="fitNote" placeholder="備註" style="flex:1;">
+          </div>
+          <button class="btn green sm" onclick="saveFitLog()">儲存打卡</button>
+        </div>
+        <div class="card">
+          <h3>身材紀錄</h3>
+          <div class="form-row">
+            <input type="number" step="0.1" id="fitWeight" placeholder="體重kg" style="width:90px;">
+            <input type="number" step="0.1" id="fitWaist" placeholder="腰圍cm" style="width:90px;">
+            <input type="number" step="0.1" id="fitHip" placeholder="臀圍cm" style="width:90px;">
+          </div>
+          <div class="form-row">
+            <input type="number" step="0.1" id="fitThigh" placeholder="大腿cm" style="width:90px;">
+            <input type="number" step="0.1" id="fitArm" placeholder="手臂cm" style="width:90px;">
+          </div>
+          <button class="btn teal sm" onclick="saveBodyLog()">儲存身材紀錄</button>
+          <div style="margin-top:10px;">
+            <input type="file" id="fitPhoto" accept="image/*" onchange="addPhoto()">
+            <div class="photo-row" id="fitPhotoRow"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>體重趨勢</h2></div>
+      <div class="card"><svg class="trend" id="weightTrend"></svg></div>
+
+      <div class="section-title"><h2>歷史紀錄</h2></div>
+      <div class="list" id="fitHistory"></div>
+    </section>
+
+    <!-- ================= DIET ================= -->
+    <section class="tab-panel" id="tab-diet">
+      <div class="page-head"><h1>飲食控管</h1></div>
+
+      <div class="card accent-teal">
+        <h3>今日菜單（依星期自動帶入）</h3>
+        <div class="today-plan" id="dietTodayPlan"></div>
+        <details class="ref">
+          <summary>查看飲食份量參考表</summary>
+          <table class="ref-table" id="dietRefTable"></table>
+        </details>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:16px;">
+        <div class="card">
+          <h3>四餐打卡</h3>
+          <div class="list" id="dietMealChecks"></div>
+          <textarea id="dietNote" placeholder="今日飲食備註" style="margin-top:10px;"></textarea>
+          <button class="btn green sm" style="margin-top:8px;" onclick="saveDietNote()">儲存備註</button>
+        </div>
+        <div class="card">
+          <h3>飲水回報</h3>
+          <div class="stat"><span class="num" id="waterNum">0</span><span class="label">/ <span id="waterGoal">0</span> ml</span></div>
+          <div class="bar-track"><div class="bar-fill" id="waterBar" style="background:var(--teal); width:0%;"></div></div>
+          <div class="water-btns">
+            <button class="btn ghost sm" onclick="addWater(200)">+200ml</button>
+            <button class="btn ghost sm" onclick="addWater(250)">+250ml</button>
+            <button class="btn ghost sm" onclick="addWater(500)">+500ml</button>
+            <button class="btn ghost sm" onclick="resetWater()">歸零</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>歷史紀錄</h2></div>
+      <div class="list" id="dietHistory"></div>
+    </section>
+
+    <!-- ================= COOKING ================= -->
+    <section class="tab-panel" id="tab-cooking">
+      <div class="page-head"><h1>做菜清單</h1></div>
+
+      <div class="card">
+        <h3>新增菜色</h3>
+        <div class="form-row">
+          <input type="text" id="ckName" placeholder="菜名" style="flex:1; min-width:140px;">
+          <input type="date" id="ckDate">
+        </div>
+        <div class="form-row">
+          <input type="text" id="ckIngredients" placeholder="食材（用逗號分隔，例如：雞胸肉, 洋蔥, 醬油）" style="flex:1;">
+        </div>
+        <div class="form-row">
+          <input type="text" id="ckNote" placeholder="備註" style="flex:1;">
+          <button class="btn green" onclick="addDish()">加入清單</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>菜色清單</h2><span class="pill" id="ckPill"></span></div>
+      <div class="list" id="cookingList"></div>
+    </section>
+
+    <!-- ================= DRIVING ================= -->
+    <section class="tab-panel" id="tab-driving">
+      <div class="page-head"><h1>開車駕駛練習行程表</h1></div>
+
+      <div class="grid cols-3">
+        <div class="card accent-teal"><div class="stat"><div class="num" id="drvTotalHrs">0</div><div class="label">累積練習時數（小時）</div></div></div>
+        <div class="card accent-green"><div class="stat"><div class="num" id="drvDoneCount">0</div><div class="label">已完成次數</div></div></div>
+        <div class="card accent-gold"><div class="stat"><div class="num" id="drvUpcoming">0</div><div class="label">未來已排定行程</div></div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>新增練習行程</h3>
+        <div class="form-row">
+          <input type="date" id="drvDate">
+          <input type="time" id="drvTime">
+          <input type="text" id="drvItem" placeholder="練習項目／路線（例如：路邊停車、上路練習）" style="flex:1; min-width:160px;">
+        </div>
+        <div class="form-row">
+          <input type="text" id="drvCompanion" placeholder="陪同教練／人員" style="width:160px;">
+          <input type="text" id="drvNote" placeholder="備註" style="flex:1;">
+          <button class="btn green" onclick="addDrive()">加入行程</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>行程與打卡</h2></div>
+      <div class="list" id="drivingList"></div>
+    </section>
+
+    <!-- ================= DIVORCE ================= -->
+    <section class="tab-panel" id="tab-divorce">
+      <div class="page-head"><h1>離婚事宜待辦事項與進度</h1></div>
+
+      <div class="card">
+        <div class="progress-head"><h3 style="margin:0;">整體進度</h3><span class="pill" id="dvPct"></span></div>
+        <div class="bar-track"><div class="bar-fill" id="dvBar" style="background:var(--teal);"></div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>新增事項</h3>
+        <div class="form-row">
+          <input type="text" id="dvTitle" placeholder="事項內容" style="flex:1; min-width:160px;">
+          <select id="dvCat">
+            <option>法律文件</option><option>財務對帳</option><option>子女相關</option>
+            <option>搬遷安置</option><option>其他</option>
+          </select>
+          <input type="date" id="dvDue">
+        </div>
+        <div class="form-row">
+          <input type="text" id="dvNote" placeholder="備註" style="flex:1;">
+          <button class="btn green" onclick="addDivorceTask()">加入清單</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>事項清單</h2></div>
+      <div class="list" id="divorceList"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+const STORE_KEY = 'lifedash_v1';
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function todayISO(){ return fmtDate(new Date()); }
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function defaultState(){
+  return {
+    todos: [],
+    shopping: [],
+    calendar: {},     // date -> { blocks:[{id,start,end,title}] }
+    fitness: { logs: {} },  // date -> {done,duration,note,weight,waist,hip,thigh,arm,photos:[]}
+    diet: { logs: {} },      // date -> {breakfast,lunch,snack,dinner,water,waterGoalOverride,note}
+    cooking: [],   // {id,name,date,note,cooked,ingredients:[{id,name,got}]}
+    driving: [],   // {id,date,time,item,companion,note,done,duration}
+    divorce: []    // {id,title,cat,due,note,done}
+  };
+}
+let state = load();
+if(!state.cooking) state.cooking = [];
+if(!state.driving) state.driving = [];
+if(!state.divorce) state.divorce = [];
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultState(), parsed);
+  }catch(e){ return defaultState(); }
+}
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); renderAll(); }
+
+/* ============================================================
+   REFERENCE DATA (from 30天運動飲食打卡報表.xlsx — weekly cycle)
+============================================================ */
+const WEEK_PLAN = {
+  1:{label:'一', exercise:'跑步機 40–45分', duration:'40–45', strength:null, water:1800, breakfast:'全麥吐司60g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'雞肉飯', snack:'優格＋水果', dinner:'鮭魚飯'},
+  2:{label:'二', exercise:'體態瑜伽 25分', duration:'25', strength:null, water:1700, breakfast:'地瓜180g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'牛肉飯', snack:'豆漿＋蛋', dinner:'雞腿＋地瓜'},
+  3:{label:'三', exercise:'臀腿A 50分', duration:'50', strength:'臀腿A', water:2000, breakfast:'燕麥40g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'魚肉飯', snack:'優格＋香蕉', dinner:'豬里肌飯'},
+  4:{label:'四', exercise:'散步 20–30分', duration:'20–30', strength:null, water:1700, breakfast:'全麥吐司60g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'豬里肌飯', snack:'豆漿＋蛋', dinner:'鯛魚＋馬鈴薯'},
+  5:{label:'五', exercise:'背＋手臂A 50分', duration:'50', strength:'背手臂A', water:2000, breakfast:'地瓜180g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'牛肉飯', snack:'牛奶＋水果', dinner:'雞肉飯'},
+  6:{label:'六', exercise:'臀腿＋核心A 50分', duration:'50', strength:'臀腿＋核心', water:2000, breakfast:'燕麥40g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'蝦飯', snack:'優格＋堅果', dinner:'魚肉＋飯'},
+  0:{label:'日', exercise:'休息', duration:'—', strength:null, water:1600, breakfast:'全麥吐司60g＋水煮蛋2顆＋無糖豆漿300ml＋水果100g', lunch:'豬里肌飯', snack:'牛奶＋香蕉', dinner:'雞腿＋地瓜'}
+};
+const STRENGTH_REF = {
+  '臀腿A':[['杯式深蹲','3×10–12','6–10kg','60–90秒','膝蓋跟腳尖同向，屁股往後'],
+           ['臀推','3×10–12','15–25kg總重','60–90秒','最高點夾臀1秒，不拱腰'],
+           ['RDL','3×10','4–6kg×2','60–90秒','屁股往後，大腿後側有拉伸'],
+           ['保加利亞分腿蹲','2×8–10/側','徒手起步','60–90秒','軀幹穩定'],
+           ['彈力帶側走','3×12–15步/側','輕中阻力','45–60秒','骨盆穩定']],
+  '背手臂A':[['高位下拉','3×10–12','15–25kg','60–90秒','手肘往下，不聳肩'],
+             ['坐姿划船','3×10–12','15–25kg','60–90秒','胸口打開'],
+             ['Face Pull','3×12–15','5–10kg','45–60秒','拉向臉，不聳肩'],
+             ['側平舉','3×12–15','1–3kg×2','45–60秒','重量輕、肩膀放鬆'],
+             ['三頭下壓','3×10–15','5–10kg','45–60秒','手肘固定'],
+             ['二頭彎舉','2×10–12','2–4kg×2','45–60秒','不要甩身體'],
+             ['Dead Bug','3×10/側','徒手','45秒','腰部穩定']],
+  '臀腿＋核心':[['臀推','3×10','依能力','60–90秒','夾臀'],
+               ['RDL','3×10','依能力','60–90秒','屁股後推'],
+               ['Step-up','3×10/側','徒手起步','60秒','腳掌穩定'],
+               ['Cable Kickback','3×12/側','輕重量','45–60秒','不要拱腰'],
+               ['側抬腿','3×15','徒手/彈力帶','45秒','感受臀側'],
+               ['Reverse Crunch','3×12','徒手','45秒','慢慢捲腹'],
+               ['Plank','3×30–45秒','徒手','45秒','身體一直線']]
+};
+const DIET_REF = [
+  ['早餐','全麥吐司','60g','或燕麥40g／地瓜180g'],
+  ['早餐','雞蛋','2顆／約100g',''],
+  ['早餐','無糖豆漿','300ml',''],
+  ['早餐','水果','100–150g',''],
+  ['午餐','熟飯','150g','休息日100–120g'],
+  ['午餐','肉／魚','120–150g',''],
+  ['午餐','蔬菜','250–300g',''],
+  ['午餐','豆腐','50–100g','可選'],
+  ['點心','希臘優格','150g','或豆漿300ml／牛奶250ml'],
+  ['點心','水果','100g',''],
+  ['點心','堅果','10g','可選'],
+  ['晚餐','熟飯','100–150g','重訓日150g'],
+  ['晚餐','肉／魚','120–150g',''],
+  ['晚餐','蔬菜','250–300g','']
+];
+
+/* ============================================================
+   TABS
+============================================================ */
+document.getElementById('navTabs').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active', b===btn));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+btn.dataset.tab));
+});
+
+/* ============================================================
+   SHOPPING
+============================================================ */
+function addShopping(fromTodo){
+  const name = fromTodo ? fromTodo.title : document.getElementById('spName').value.trim();
+  if(!name) return;
+  const item = {
+    id: uid(),
+    name,
+    cat: fromTodo ? '其他' : document.getElementById('spCat').value,
+    qty: fromTodo ? '' : document.getElementById('spQty').value,
+    price: fromTodo ? '' : document.getElementById('spPrice').value,
+    store: fromTodo ? '' : document.getElementById('spStore').value,
+    note: fromTodo ? '' : document.getElementById('spNote').value,
+    purchased:false,
+    fromTodoId: fromTodo ? fromTodo.id : null
+  };
+  state.shopping.push(item);
+  if(!fromTodo){
+    ['spName','spQty','spPrice','spStore','spNote'].forEach(id=>document.getElementById(id).value='');
+  }
+  save();
+  return item;
+}
+function toggleShopPurchased(id){
+  const it = state.shopping.find(s=>s.id===id); if(!it) return;
+  it.purchased = !it.purchased;
+  if(it.purchased && it.fromTodoId){
+    const t = state.todos.find(t=>t.id===it.fromTodoId);
+    if(t) t.done = true;
+  }
+  save();
+}
+function delShopping(id){ state.shopping = state.shopping.filter(s=>s.id!==id); save(); }
+function clearPurchased(){ state.shopping = state.shopping.filter(s=>!s.purchased); save(); }
+function renderShopping(){
+  const filter = document.getElementById('spFilter').value;
+  const active = state.shopping.filter(s=>!s.purchased && (!filter || s.cat===filter));
+  const done = state.shopping.filter(s=>s.purchased && (!filter || s.cat===filter));
+  document.getElementById('shopActiveList').innerHTML = active.length? active.map(shopRow).join('') : '<div class="empty">目前沒有待購買項目</div>';
+  document.getElementById('shopDoneList').innerHTML = done.length? done.map(shopRow).join('') : '<div class="empty">尚無已購買紀錄</div>';
+}
+function shopRow(s){
+  return `<div class="row ${s.purchased?'done':''}">
+    <div class="chk ${s.purchased?'checked':''}" onclick="toggleShopPurchased('${s.id}')">${s.purchased?'✓':''}</div>
+    <div class="title ${s.purchased?'strike':''}">${esc(s.name)} ${s.qty?`<span class="meta">×${esc(s.qty)}</span>`:''} ${s.price?`<span class="meta">約$${esc(s.price)}</span>`:''}</div>
+    <span class="tag">${esc(s.cat)}</span>
+    ${s.fromTodoId?'<span class="link-tag">來自待辦</span>':''}
+    ${s.store?`<span class="meta">${esc(s.store)}</span>`:''}
+    <button class="del" onclick="delShopping('${s.id}')">✕</button>
+  </div>`;
+}
+
+/* ============================================================
+   TODO
+============================================================ */
+function addTodo(){
+  const title = document.getElementById('tdTitle').value.trim();
+  if(!title) return;
+  const todo = {
+    id: uid(), title,
+    cat: document.getElementById('tdCat').value,
+    priority: document.getElementById('tdPriority').value,
+    due: document.getElementById('tdDue').value || todayISO(),
+    shopping: document.getElementById('tdShopping').checked,
+    done:false
+  };
+  state.todos.push(todo);
+  if(todo.shopping) addShopping(todo);
+  ['tdTitle','tdDue'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tdShopping').checked=false;
+  save();
+}
+function toggleTodo(id){
+  const t = state.todos.find(t=>t.id===id); if(!t) return;
+  t.done = !t.done; save();
+}
+function delTodo(id){
+  state.todos = state.todos.filter(t=>t.id!==id);
+  state.shopping = state.shopping.filter(s=>s.fromTodoId!==id);
+  save();
+}
+function renderTodo(){
+  const list = [...state.todos].sort((a,b)=> (a.done-b.done) || (a.due<b.due?-1:1));
+  document.getElementById('todoList').innerHTML = list.length? list.map(todoRow).join('') : '<div class="empty">還沒有待辦事項</div>';
+  const openCount = state.todos.filter(t=>!t.done).length;
+  document.getElementById('tdPill').textContent = openCount+' 件未完成';
+  document.getElementById('tdPill').className = 'pill' + (openCount>0?' warn':' on');
+}
+function todoRow(t){
+  return `<div class="row ${t.done?'done':''}">
+    <div class="chk ${t.done?'checked':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div>
+    <div class="title ${t.done?'strike':''}">${esc(t.title)}</div>
+    <span class="tag">${esc(t.cat)}</span>
+    ${t.priority==='high'?'<span class="tag" style="background:var(--rust-bg); color:var(--rust);">重要</span>':''}
+    <span class="meta">${esc(t.due)}</span>
+    ${t.shopping?'<span class="link-tag">需採購</span>':''}
+    <button class="del" onclick="delTodo('${t.id}')">✕</button>
+  </div>`;
+}
+
+/* ============================================================
+   CALENDAR
+============================================================ */
+let calCursor = new Date(); calCursor.setDate(1);
+let selectedDate = todayISO();
+function calShift(n){ calCursor.setMonth(calCursor.getMonth()+n); renderCalendar(); }
+function dayStatus(dateISO){
+  const fit = state.fitness.logs[dateISO];
+  const diet = state.diet.logs[dateISO];
+  const dow = new Date(dateISO+'T00:00:00').getDay();
+  const plan = WEEK_PLAN[dow];
+  const dots=[];
+  if(fit && fit.done) dots.push('green');
+  if(diet && diet.breakfast && diet.lunch && diet.snack && diet.dinner) dots.push('teal');
+  if(diet && plan && (diet.water||0) >= (diet.waterGoalOverride||plan.water)) dots.push('gold');
+  if(state.todos.some(t=>t.due===dateISO && !t.done)) dots.push('rust');
+  return dots;
+}
+function renderCalendar(){
+  const dowNames=['日','一','二','三','四','五','六'];
+  document.getElementById('calDow').innerHTML = dowNames.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  document.getElementById('calLabel').textContent = calCursor.getFullYear()+' 年 '+(calCursor.getMonth()+1)+' 月';
+
+  const year=calCursor.getFullYear(), month=calCursor.getMonth();
+  const firstDow = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  let html='';
+  for(let i=0;i<firstDow;i++) html+='<div class="cal-cell pad"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const dateISO = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday = dateISO===todayISO();
+    const isSel = dateISO===selectedDate;
+    const dots = dayStatus(dateISO);
+    html += `<div class="cal-cell ${isToday?'today':''} ${isSel?'selected':''}" onclick="selectDay('${dateISO}')">
+      <div class="d">${d}</div>
+      <div class="cal-dots">${dots.map(c=>`<span class="dot ${c}"></span>`).join('')}</div>
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+  renderDayPanel();
+}
+function selectDay(dateISO){ selectedDate=dateISO; renderCalendar(); }
+function addBlock(){
+  const start=document.getElementById('blkStart').value, end=document.getElementById('blkEnd').value, title=document.getElementById('blkTitle').value.trim();
+  if(!start||!title) return;
+  if(!state.calendar[selectedDate]) state.calendar[selectedDate]={blocks:[]};
+  state.calendar[selectedDate].blocks.push({id:uid(), start, end, title});
+  state.calendar[selectedDate].blocks.sort((a,b)=> a.start<b.start?-1:1);
+  document.getElementById('blkStart').value=''; document.getElementById('blkEnd').value=''; document.getElementById('blkTitle').value='';
+  save();
+}
+function delBlock(dateISO,id){
+  if(state.calendar[dateISO]) state.calendar[dateISO].blocks = state.calendar[dateISO].blocks.filter(b=>b.id!==id);
+  save();
+}
+function renderDayPanel(){
+  document.getElementById('dayPanelTitle').textContent = selectedDate + ' 時間安排';
+  const day = state.calendar[selectedDate];
+  const blocks = day? day.blocks : [];
+  document.getElementById('dayTimeline').innerHTML = blocks.length ? blocks.map(b=>
+    `<div class="tl-row"><span class="time">${b.start}${b.end?'–'+b.end:''}</span><span class="ttl">${esc(b.title)}</span><button class="del" onclick="delBlock('${selectedDate}','${b.id}')">✕</button></div>`
+  ).join('') : '<div class="empty">此日尚無時間安排</div>';
+
+  const dueTodos = state.todos.filter(t=>t.due===selectedDate);
+  const dots = dayStatus(selectedDate);
+  const labels = {green:'運動已打卡', teal:'飲食已打卡', gold:'飲水達標', rust:'尚有待辦未完成'};
+  document.getElementById('daySummary').innerHTML =
+    `當日待辦：${dueTodos.length} 件　｜　${dots.length? dots.map(d=>labels[d]).join('、') : '尚無其他打卡紀錄'}`;
+}
+
+/* ============================================================
+   FITNESS
+============================================================ */
+function todayPlan(){ return WEEK_PLAN[new Date().getDay()]; }
+function renderFitness(){
+  const plan = todayPlan();
+  const t = todayISO();
+  const log = state.fitness.logs[t] || {};
+  document.getElementById('fitTodayPlan').innerHTML =
+    `<span class="chip">🏋️ ${esc(plan.exercise)}</span><span class="chip">⏱ ${esc(plan.duration)} 分</span><span class="chip">💧 目標 ${plan.water} ml</span>`;
+
+  const ref = document.getElementById('fitStrengthRef');
+  if(plan.strength && STRENGTH_REF[plan.strength]){
+    ref.style.display='block';
+    document.getElementById('fitStrengthTable').innerHTML =
+      '<tr><th>動作</th><th>組數×次數</th><th>起始重量</th><th>休息</th><th>重點</th></tr>' +
+      STRENGTH_REF[plan.strength].map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+  } else { ref.style.display='none'; }
+
+  document.getElementById('fitDoneChk').checked = !!log.done;
+  document.getElementById('fitDuration').value = log.duration || '';
+  document.getElementById('fitNote').value = log.note || '';
+
+  renderFitHistory();
+  renderWeightTrend();
+  renderPhotos();
+}
+function ensureFitLog(dateISO){
+  if(!state.fitness.logs[dateISO]) state.fitness.logs[dateISO]={photos:[]};
+  if(!state.fitness.logs[dateISO].photos) state.fitness.logs[dateISO].photos=[];
+  return state.fitness.logs[dateISO];
+}
+function toggleFitDone(){
+  const log = ensureFitLog(todayISO());
+  log.done = document.getElementById('fitDoneChk').checked;
+  save();
+}
+function saveFitLog(){
+  const log = ensureFitLog(todayISO());
+  log.duration = document.getElementById('fitDuration').value;
+  log.note = document.getElementById('fitNote').value;
+  log.done = document.getElementById('fitDoneChk').checked;
+  save();
+}
+function saveBodyLog(){
+  const log = ensureFitLog(todayISO());
+  log.weight = document.getElementById('fitWeight').value;
+  log.waist = document.getElementById('fitWaist').value;
+  log.hip = document.getElementById('fitHip').value;
+  log.thigh = document.getElementById('fitThigh').value;
+  log.arm = document.getElementById('fitArm').value;
+  ['fitWeight','fitWaist','fitHip','fitThigh','fitArm'].forEach(id=>document.getElementById(id).value='');
+  save();
+}
+function addPhoto(){
+  const input = document.getElementById('fitPhoto');
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const log = ensureFitLog(todayISO());
+    log.photos.push({id:uid(), data:e.target.result});
+    input.value='';
+    save();
+  };
+  reader.readAsDataURL(file);
+}
+function delPhoto(dateISO,id){
+  const log = state.fitness.logs[dateISO]; if(!log) return;
+  log.photos = (log.photos||[]).filter(p=>p.id!==id);
+  save();
+}
+function renderPhotos(){
+  const log = state.fitness.logs[todayISO()] || {photos:[]};
+  document.getElementById('fitPhotoRow').innerHTML = (log.photos||[]).map(p=>
+    `<div style="position:relative;"><img class="photo-thumb" src="${p.data}"><button class="del" style="position:absolute;top:-6px;right:-6px;background:#fff;border-radius:50%;" onclick="delPhoto('${todayISO()}','${p.id}')">✕</button></div>`
+  ).join('');
+}
+function renderFitHistory(){
+  const dates = Object.keys(state.fitness.logs).sort().reverse().slice(0,14);
+  document.getElementById('fitHistory').innerHTML = dates.length ? dates.map(d=>{
+    const l = state.fitness.logs[d];
+    const parts=[];
+    if(l.done) parts.push('<span class="pill on">已打卡</span>');
+    if(l.duration) parts.push(`<span class="meta">${esc(l.duration)}分</span>`);
+    if(l.weight) parts.push(`<span class="meta">體重 ${esc(l.weight)}kg</span>`);
+    if(l.waist) parts.push(`<span class="meta">腰 ${esc(l.waist)}cm</span>`);
+    if(l.photos && l.photos.length) parts.push(`<span class="meta">📷×${l.photos.length}</span>`);
+    return `<div class="row"><div class="title">${d}</div>${parts.join(' ')}</div>`;
+  }).join('') : '<div class="empty">尚無運動紀錄</div>';
+}
+function renderWeightTrend(){
+  const dates = Object.keys(state.fitness.logs).filter(d=>state.fitness.logs[d].weight).sort();
+  const svg = document.getElementById('weightTrend');
+  if(dates.length<2){ svg.innerHTML = `<text x="10" y="60" font-size="12" fill="#6B6257">累積至少 2 筆體重紀錄後會顯示趨勢圖</text>`; return; }
+  const vals = dates.map(d=>parseFloat(state.fitness.logs[d].weight));
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pad = (max-min)||1;
+  const W=100, H=100;
+  const pts = vals.map((v,i)=>{
+    const x = (i/(vals.length-1))*W;
+    const y = H - ((v-min)/pad)*H*0.8 - H*0.1;
+    return x+','+y;
+  }).join(' ');
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  svg.setAttribute('preserveAspectRatio','none');
+  svg.innerHTML = `<polyline points="${pts}" fill="none" stroke="#A8553B" stroke-width="1.4" vector-effect="non-scaling-stroke"/>` +
+    vals.map((v,i)=>{const x=(i/(vals.length-1))*W; const y=H-((v-min)/pad)*H*0.8 - H*0.1; return `<circle cx="${x}" cy="${y}" r="1.6" fill="#A8553B"/>`}).join('');
+}
+
+/* ============================================================
+   DIET
+============================================================ */
+function ensureDietLog(dateISO){
+  if(!state.diet.logs[dateISO]) state.diet.logs[dateISO]={};
+  return state.diet.logs[dateISO];
+}
+function renderDiet(){
+  const plan = todayPlan();
+  const t = todayISO();
+  const log = ensureDietLog(t);
+  document.getElementById('dietTodayPlan').innerHTML =
+    `<span class="chip">🍳 ${esc(plan.breakfast)}</span><span class="chip">🍚 午：${esc(plan.lunch)}</span><span class="chip">🥛 點心：${esc(plan.snack)}</span><span class="chip">🍽 晚：${esc(plan.dinner)}</span>`;
+
+  document.getElementById('dietRefTable').innerHTML =
+    '<tr><th>餐次</th><th>食物</th><th>份量</th><th>備註</th></tr>' +
+    DIET_REF.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+
+  const meals = [['breakfast','早餐',plan.breakfast],['lunch','午餐',plan.lunch],['snack','點心',plan.snack],['dinner','晚餐',plan.dinner]];
+  document.getElementById('dietMealChecks').innerHTML = meals.map(([key,label,desc])=>
+    `<div class="row ${log[key]?'done':''}">
+      <div class="chk ${log[key]?'checked':''}" onclick="toggleMeal('${key}')">${log[key]?'✓':''}</div>
+      <div class="title">${label}<span class="meta">　${esc(desc)}</span></div>
+    </div>`).join('');
+  document.getElementById('dietNote').value = log.note || '';
+
+  const goal = log.waterGoalOverride || plan.water;
+  const water = log.water || 0;
+  document.getElementById('waterNum').textContent = water;
+  document.getElementById('waterGoal').textContent = goal;
+  document.getElementById('waterBar').style.width = Math.min(100, (water/goal)*100)+'%';
+
+  renderDietHistory();
+}
+function toggleMeal(key){
+  const log = ensureDietLog(todayISO());
+  log[key] = !log[key];
+  save();
+}
+function saveDietNote(){
+  const log = ensureDietLog(todayISO());
+  log.note = document.getElementById('dietNote').value;
+  save();
+}
+function addWater(n){
+  const log = ensureDietLog(todayISO());
+  log.water = (log.water||0) + n;
+  save();
+}
+function resetWater(){
+  const log = ensureDietLog(todayISO());
+  log.water = 0;
+  save();
+}
+function renderDietHistory(){
+  const dates = Object.keys(state.diet.logs).sort().reverse().slice(0,14);
+  document.getElementById('dietHistory').innerHTML = dates.length ? dates.map(d=>{
+    const l = state.diet.logs[d];
+    const done = ['breakfast','lunch','snack','dinner'].filter(k=>l[k]).length;
+    return `<div class="row"><div class="title">${d}</div><span class="meta">四餐完成 ${done}/4</span><span class="meta">飲水 ${l.water||0}ml</span></div>`;
+  }).join('') : '<div class="empty">尚無飲食紀錄</div>';
+}
+
+/* ============================================================
+   OVERVIEW
+============================================================ */
+function renderOverview(){
+  const t = todayISO();
+  const dow = new Date().getDay();
+  const dowNames=['日','一','二','三','四','五','六'];
+  document.getElementById('ovDate').textContent = t + '（週'+dowNames[dow]+'）';
+
+  const openTodos = state.todos.filter(t=>!t.done);
+  const dueToday = state.todos.filter(x=>x.due===t);
+  const doneToday = dueToday.filter(x=>x.done).length;
+  const pendingShop = state.shopping.filter(s=>!s.purchased);
+  const fitLog = state.fitness.logs[t]||{};
+  const dietLog = state.diet.logs[t]||{};
+  const plan = todayPlan();
+  const mealsDone = ['breakfast','lunch','snack','dinner'].filter(k=>dietLog[k]).length;
+  const water = dietLog.water||0, goal = dietLog.waterGoalOverride||plan.water;
+
+  document.getElementById('ovStats').innerHTML = `
+    <div class="card accent-gold">
+      <div class="stat"><div class="num">${pendingShop.length}</div><div class="label">待採購項目</div></div>
+    </div>
+    <div class="card accent-rust">
+      <div class="stat"><div class="num">${dueToday.length? doneToday+'/'+dueToday.length : '0'}</div><div class="label">今日待辦完成</div></div>
+    </div>
+    <div class="card accent-green">
+      <div class="stat"><div class="num">${fitLog.done?'已完成':'未打卡'}</div><div class="label">今日運動：${esc(plan.exercise)}</div></div>
+    </div>
+    <div class="card accent-teal">
+      <div class="stat"><div class="num">${mealsDone}/4</div><div class="label">飲食打卡・飲水 ${water}/${goal}ml</div></div>
+      <div class="bar-track"><div class="bar-fill" style="background:var(--teal); width:${Math.min(100,(water/goal)*100)}%;"></div></div>
+    </div>
+  `;
+
+  document.getElementById('ovTodoPill').textContent = openTodos.length+' 件未完成';
+  document.getElementById('ovTodoList').innerHTML = dueToday.length ? dueToday.map(todoRow).join('') : '<div class="empty">今天沒有安排待辦事項</div>';
+
+  document.getElementById('ovShopPill').textContent = pendingShop.length+' 件';
+  document.getElementById('ovShopList').innerHTML = pendingShop.slice(0,6).length ? pendingShop.slice(0,6).map(shopRow).join('') : '<div class="empty">採購清單已清空</div>';
+}
+
+/* ============================================================
+   COOKING (待辦做菜清單)
+============================================================ */
+function addDish(){
+  const name = document.getElementById('ckName').value.trim();
+  if(!name) return;
+  const raw = document.getElementById('ckIngredients').value;
+  const ingredients = raw.split(/[,，、]/).map(s=>s.trim()).filter(Boolean).map(n=>({id:uid(), name:n, got:false}));
+  state.cooking.push({
+    id: uid(), name,
+    date: document.getElementById('ckDate').value || '',
+    note: document.getElementById('ckNote').value,
+    cooked:false,
+    ingredients
+  });
+  ['ckName','ckDate','ckIngredients','ckNote'].forEach(id=>document.getElementById(id).value='');
+  save();
+}
+function toggleIngredient(dishId, ingId){
+  const dish = state.cooking.find(d=>d.id===dishId); if(!dish) return;
+  const ing = dish.ingredients.find(i=>i.id===ingId); if(!ing) return;
+  ing.got = !ing.got;
+  save();
+}
+function addMissingToShopping(dishId){
+  const dish = state.cooking.find(d=>d.id===dishId); if(!dish) return;
+  const existingNames = new Set(state.shopping.filter(s=>!s.purchased).map(s=>s.name));
+  dish.ingredients.filter(i=>!i.got && !existingNames.has(i.name)).forEach(i=>{
+    state.shopping.push({id:uid(), name:i.name, cat:'食材', qty:'', price:'', store:'', note:'來自「'+dish.name+'」', purchased:false, fromTodoId:null});
+  });
+  save();
+}
+function toggleCooked(id){
+  const dish = state.cooking.find(d=>d.id===id); if(!dish) return;
+  dish.cooked = !dish.cooked;
+  save();
+}
+function delDish(id){ state.cooking = state.cooking.filter(d=>d.id!==id); save(); }
+function renderCooking(){
+  const list = [...state.cooking].sort((a,b)=> (a.cooked-b.cooked) || ((a.date||'9999')<(b.date||'9999')?-1:1));
+  document.getElementById('ckPill').textContent = state.cooking.filter(d=>!d.cooked).length + ' 道待煮';
+  document.getElementById('cookingList').innerHTML = list.length ? list.map(d=>{
+    const missing = d.ingredients.filter(i=>!i.got).length;
+    return `<div class="card ${d.cooked?'done':''}" style="padding:12px 14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="chk ${d.cooked?'checked':''}" onclick="toggleCooked('${d.id}')">${d.cooked?'✓':''}</div>
+        <div class="title ${d.cooked?'strike':''}" style="font-weight:700;">${esc(d.name)}</div>
+        ${d.date?`<span class="meta">${esc(d.date)}</span>`:''}
+        <button class="del" onclick="delDish('${d.id}')">✕</button>
+      </div>
+      <div class="ing-wrap">
+        ${d.ingredients.map(i=>`<span class="ing-chip ${i.got?'got':''}" onclick="toggleIngredient('${d.id}','${i.id}')">${esc(i.name)}</span>`).join('') || '<span class="meta">尚未填寫食材</span>'}
+      </div>
+      ${d.note?`<div class="meta">${esc(d.note)}</div>`:''}
+      ${missing>0 ? `<button class="btn ghost sm" style="margin-top:6px;" onclick="addMissingToShopping('${d.id}')">將缺少的 ${missing} 項食材加入採購清單</button>` : ''}
+    </div>`;
+  }).join('') : '<div class="empty">還沒有規劃菜色</div>';
+}
+
+/* ============================================================
+   DRIVING PRACTICE (開車駕駛練習)
+============================================================ */
+function addDrive(){
+  const item = document.getElementById('drvItem').value.trim();
+  if(!item) return;
+  state.driving.push({
+    id: uid(),
+    date: document.getElementById('drvDate').value || todayISO(),
+    time: document.getElementById('drvTime').value,
+    item,
+    companion: document.getElementById('drvCompanion').value,
+    note: document.getElementById('drvNote').value,
+    done:false, duration:''
+  });
+  ['drvDate','drvTime','drvItem','drvCompanion','drvNote'].forEach(id=>document.getElementById(id).value='');
+  save();
+}
+function toggleDriveDone(id){
+  const d = state.driving.find(d=>d.id===id); if(!d) return;
+  d.done = !d.done;
+  if(d.done && !d.duration){
+    const v = prompt('這次練習時間（分鐘）？', '60');
+    if(v) d.duration = v;
+  }
+  save();
+}
+function delDrive(id){ state.driving = state.driving.filter(d=>d.id!==id); save(); }
+function renderDriving(){
+  const list = [...state.driving].sort((a,b)=> (a.date+ (a.time||''))<(b.date+(b.time||''))?-1:1);
+  const totalMin = state.driving.reduce((sum,d)=>sum+(parseFloat(d.duration)||0),0);
+  document.getElementById('drvTotalHrs').textContent = (totalMin/60).toFixed(1);
+  document.getElementById('drvDoneCount').textContent = state.driving.filter(d=>d.done).length;
+  document.getElementById('drvUpcoming').textContent = state.driving.filter(d=>!d.done && d.date>=todayISO()).length;
+  document.getElementById('drivingList').innerHTML = list.length ? list.map(d=>
+    `<div class="row ${d.done?'done':''}">
+      <div class="chk ${d.done?'checked':''}" onclick="toggleDriveDone('${d.id}')">${d.done?'✓':''}</div>
+      <div class="title ${d.done?'strike':''}">${esc(d.item)}</div>
+      <span class="meta">${esc(d.date)}${d.time?' '+esc(d.time):''}</span>
+      ${d.companion?`<span class="tag">${esc(d.companion)}</span>`:''}
+      ${d.done && d.duration?`<span class="meta">${esc(d.duration)}分</span>`:''}
+      ${d.note?`<span class="meta">${esc(d.note)}</span>`:''}
+      <button class="del" onclick="delDrive('${d.id}')">✕</button>
+    </div>`
+  ).join('') : '<div class="empty">還沒有排定練習行程</div>';
+}
+
+/* ============================================================
+   DIVORCE MATTERS (離婚事宜待辦事項與進度)
+============================================================ */
+function addDivorceTask(){
+  const title = document.getElementById('dvTitle').value.trim();
+  if(!title) return;
+  state.divorce.push({
+    id: uid(), title,
+    cat: document.getElementById('dvCat').value,
+    due: document.getElementById('dvDue').value,
+    note: document.getElementById('dvNote').value,
+    done:false
+  });
+  ['dvTitle','dvDue','dvNote'].forEach(id=>document.getElementById(id).value='');
+  save();
+}
+function toggleDivorce(id){
+  const t = state.divorce.find(t=>t.id===id); if(!t) return;
+  t.done = !t.done; save();
+}
+function delDivorce(id){ state.divorce = state.divorce.filter(t=>t.id!==id); save(); }
+function renderDivorce(){
+  const list = [...state.divorce].sort((a,b)=> (a.done-b.done) || ((a.due||'9999')<(b.due||'9999')?-1:1));
+  const total = state.divorce.length, done = state.divorce.filter(t=>t.done).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('dvPct').textContent = total ? `${done}/${total}（${pct}%）` : '尚無事項';
+  document.getElementById('dvBar').style.width = pct+'%';
+  document.getElementById('divorceList').innerHTML = list.length ? list.map(t=>
+    `<div class="row ${t.done?'done':''}">
+      <div class="chk ${t.done?'checked':''}" onclick="toggleDivorce('${t.id}')">${t.done?'✓':''}</div>
+      <div class="title ${t.done?'strike':''}">${esc(t.title)}</div>
+      <span class="tag">${esc(t.cat)}</span>
+      ${t.due?`<span class="meta">${esc(t.due)}</span>`:''}
+      ${t.note?`<span class="meta">${esc(t.note)}</span>`:''}
+      <button class="del" onclick="delDivorce('${t.id}')">✕</button>
+    </div>`
+  ).join('') : '<div class="empty">還沒有新增事項</div>';
+}
+
+/* ============================================================
+   UTIL + INIT
+============================================================ */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderAll(){
+  renderOverview();
+  renderShopping();
+  renderTodo();
+  renderCalendar();
+  renderFitness();
+  renderDiet();
+  renderCooking();
+  renderDriving();
+  renderDivorce();
+}
+renderAll();
+
+/* sidebar collapse */
+const SIDEBAR_KEY = 'lifedash_sidebar_collapsed';
+function toggleSidebar(){
+  const sb = document.querySelector('.sidebar');
+  const collapsed = sb.classList.toggle('collapsed');
+  localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
+}
+if(localStorage.getItem(SIDEBAR_KEY) === '1'){
+  document.querySelector('.sidebar').classList.add('collapsed');
+}
+</script>
+</body>
+</html>
